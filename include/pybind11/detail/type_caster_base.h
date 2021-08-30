@@ -34,12 +34,12 @@ class loader_life_support {
 public:
     /// A new patient frame is created when a function is entered
     loader_life_support() {
-        get_internals().loader_patient_stack.push_back(nullptr);
+        loader_patient_stack().push_back(nullptr);
     }
 
     /// ... and destroyed after it returns
     ~loader_life_support() {
-        auto &stack = get_internals().loader_patient_stack;
+        auto &stack = loader_patient_stack();
         if (stack.empty())
             pybind11_fail("loader_life_support: internal error");
 
@@ -55,7 +55,7 @@ public:
     /// This can only be used inside a pybind11-bound function, either by `argument_loader`
     /// at argument preparation time or by `py::cast()` at execution time.
     PYBIND11_NOINLINE static void add_patient(handle h) {
-        auto &stack = get_internals().loader_patient_stack;
+        auto &stack = loader_patient_stack();
         if (stack.empty())
             throw cast_error("When called outside a bound function, py::cast() cannot "
                              "do Python -> C++ conversions which require the creation "
@@ -72,6 +72,12 @@ public:
             if (result == -1)
                 pybind11_fail("loader_life_support: error adding patient");
         }
+    }
+
+private:
+    static std::vector<PyObject *> &loader_patient_stack() {
+        thread_local std::vector<PyObject *> stack;
+        return stack;
     }
 };
 
